@@ -321,15 +321,17 @@ class PlanApp:
         self._add_code_to_slot(code, self._selected_slot())
 
     def _remove_selected_course(self) -> None:
-        slot = self._selected_slot()
-        lb = self.slot_listboxes[slot]
-        sel = lb.curselection()
-        if not sel:
+        # Hitta vald kurs i valfri periodlista utan att behöva välja termin först
+        for slot, lb in self.slot_listboxes.items():
+            sel = lb.curselection()
+            if not sel:
+                continue
+            idx = sel[0]
+            code = self.plan[slot][idx]
+            self.plan[slot].remove(code)
+            self._refresh_slot(slot)
             return
-        idx = sel[0]
-        code = self.plan[slot][idx]
-        self.plan[slot].remove(code)
-        self._refresh_slot(slot)
+        messagebox.showinfo("Ingen kurs", "Markera en kurs i en period för att ta bort den.")
 
     def _add_code_to_slot(self, code: str, slot: str) -> None:
         if code in self.plan[slot]:
