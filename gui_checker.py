@@ -5,14 +5,6 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Dict, List, Set
 
-# Simple display mapping for main area codes -> names
-AREA_DISPLAY_MAP = {
-    "1": "Maskinteknik",
-    "3383": "Maskinteknik",
-    "3392": "Tillämpad mekanik",
-    "teme": "Tillämpad mekanik",
-}
-
 INRIKTNINGAR = [
     "Energi- och miljöteknik",
     "Flygteknik",
@@ -102,11 +94,7 @@ def is_primary_area_course(course: Course, area_targets: Set[str], profile_targe
 
 
 def format_main_areas(areas: List[str]) -> str:
-    formatted: List[str] = []
-    for a in areas:
-        key = a.strip().lower()
-        formatted.append(AREA_DISPLAY_MAP.get(key, a))
-    return ", ".join(formatted)
+    return ", ".join(a.strip() for a in areas)
 
 
 class PlanApp:
@@ -147,6 +135,9 @@ class PlanApp:
         self._build_ui()
         self._populate_search()
         self.drag_code: str | None = None
+
+        # Ladda ev. standardplan automatiskt om plan.json finns
+        self._load_plan_from_path(Path("plan.json"), show_message=False)
 
     def _build_ui(self) -> None:
         top = ttk.Frame(self.root, padding=4)
@@ -394,14 +385,21 @@ class PlanApp:
         path = filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
         if not path:
             return
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        self._load_plan_from_path(Path(path), show_message=True)
+
+    def _load_plan_from_path(self, path: Path, show_message: bool = True) -> bool:
+        if not path.exists():
+            return False
+        data = json.loads(path.read_text(encoding="utf-8"))
         self.plan = {slot: data.get("plan", {}).get(slot, []) for slot, _ in self.plan_slots}
-        self.profile_var.set(data.get("profile", ""))
-        self.primary_area_var.set(data.get("primary_area", "Maskinteknik"))
-        self.base_hp_var.set(data.get("base_hp", 180.0))
+        self.profile_var.set(data.get("profile", self.profile_var.get()))
+        self.primary_area_var.set(data.get("primary_area", self.primary_area_var.get()))
+        self.base_hp_var.set(data.get("base_hp", self.base_hp_var.get()))
         for slot, _ in self.plan_slots:
             self._refresh_slot(slot)
-        messagebox.showinfo("Laddat", f"Plan laddad från {path}")
+        if show_message:
+            messagebox.showinfo("Laddat", f"Plan laddad från {path}")
+        return True
 
     def _collect_courses(self) -> List[Course]:
         codes: List[str] = []
