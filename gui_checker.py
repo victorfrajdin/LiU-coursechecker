@@ -5,6 +5,11 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Dict, List, Set
 
+# Profilalias för att matcha kursdata (engelska namn) mot svenska val
+PROFILE_ALIASES: Dict[str, str] = {
+    "produktionsledning": "operations management",
+}
+
 INRIKTNINGAR = [
     "Energi- och miljöteknik",
     "Flygteknik",
@@ -95,6 +100,11 @@ def is_primary_area_course(course: Course, area_targets: Set[str], profile_targe
 
 def format_main_areas(areas: List[str]) -> str:
     return ", ".join(a.strip() for a in areas)
+
+
+def normalize_profile(name: str) -> str:
+    key = name.strip().lower()
+    return PROFILE_ALIASES.get(key, key)
 
 
 class PlanApp:
@@ -415,7 +425,7 @@ class PlanApp:
         try:
             courses = self._collect_courses()
             base_hp = float(self.base_hp_var.get() or 0)
-            profile_name = self.profile_var.get().strip().lower()
+            profile_name = normalize_profile(self.profile_var.get())
             primary_area = (self.primary_area_var.get() or "Maskinteknik").strip()
             primary_area_lower = primary_area.lower()
 
@@ -430,7 +440,9 @@ class PlanApp:
             thesis_hp = 30.0  # assumed OK
             total_hp = base_hp + sum(c.hp for c in courses) + thesis_hp
 
-            profile_courses = [c for c in courses if any(p.lower() == profile_name for p in c.profiles)] if profile_name else []
+            profile_courses = [
+                c for c in courses if any(normalize_profile(p) == profile_name for p in c.profiles)
+            ] if profile_name else []
             profile_hp = sum(c.hp for c in profile_courses)
 
             project_in_profile = next((c for c in profile_courses if c.term == 9 and "projekt" in c.name.lower()), None)
